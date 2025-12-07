@@ -5,7 +5,19 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UmbTextStyles } from '@umbraco-cms/backoffice/style';
 import type { UmbPropertyTypeScaffoldModel } from '@umbraco-cms/backoffice/content-type';
 import type { UmbWorkspaceViewElement } from '@umbraco-cms/backoffice/workspace';
-import type { UUIBooleanInputEvent, UUIInputEvent/*, UUISelectEvent*/ } from '@umbraco-cms/backoffice/external/uui';
+import type { UUIBooleanInputEvent, UUIInputEvent, UUISelectEvent } from '@umbraco-cms/backoffice/external/uui';
+
+// Type definitions for conditional logic
+type ConditionalOperator = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'greaterThan' | 'lessThan' | 'isEmpty' | 'isNotEmpty';
+type LogicalOperator = 'and' | 'or';
+
+interface ConditionalRule {
+	id: string;
+	fieldAlias: string;
+	operator: ConditionalOperator;
+	value: string;
+	logicalOperator?: LogicalOperator;
+}
 
 @customElement('cndflds-property-type-workspace-view-settings')
 export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitElement implements UmbWorkspaceViewElement {
@@ -14,6 +26,12 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	@state()
 	private _data?: UmbPropertyTypeScaffoldModel;
 
+	@state()
+	private _conditionalRules: ConditionalRule[] = [];
+
+	@state()
+	private _availableFields: Array<{ value: string; name: string }> = [];
+
 	constructor() {
 		super();
 
@@ -21,7 +39,10 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 
 		this.consumeContext(UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT, (instance) => {
 			this.#context = instance;
-			this.observe(instance?.data, (data) => (this._data = data), 'observeData');
+			this.observe(instance?.data, (data) => {
+				this._data = data;
+				this.#loadAvailableFields();
+			}, 'observeData');
 			//   this.observe(instance?.isNew, (isNew) => (this._isNew = isNew), '_observeIsNew');
 		});
 
@@ -40,6 +61,17 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		// }).passContextAliasMatches();
 	}
 
+	async #loadAvailableFields() {
+		// TODO: Load available fields from the content type
+		// For now, populate with placeholder data
+		// You'll need to get the content type from the parent context and extract its properties
+		this._availableFields = [
+			{ value: 'title', name: 'Title' },
+			{ value: 'description', name: 'Description' },
+			{ value: 'isActive', name: 'Is Active' },
+		];
+	}
+
 	updateValue(partialValue: Partial<UmbPropertyTypeScaffoldModel>) {
 		this.#context?.updateData(partialValue);
 	}
@@ -56,6 +88,51 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		this.updateValue({
 			validation: { ...this._data?.validation, mandatory: this._data?.validation.mandatory ?? false, mandatoryMessage },
 		});
+	}
+
+	#addConditionalRule() {
+		const newRule: ConditionalRule = {
+			id: crypto.randomUUID(),
+			fieldAlias: '',
+			operator: 'equals',
+			value: '',
+			logicalOperator: this._conditionalRules.length > 0 ? 'and' : undefined,
+		};
+		this._conditionalRules = [...this._conditionalRules, newRule];
+	}
+
+	#removeConditionalRule(id: string) {
+		this._conditionalRules = this._conditionalRules.filter((rule) => rule.id !== id);
+		// If we removed the first rule and there are more rules, remove the logical operator from the new first rule
+		if (this._conditionalRules.length > 0) {
+			this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: undefined };
+		}
+	}
+
+	#updateConditionalRule(id: string, updates: Partial<ConditionalRule>) {
+		this._conditionalRules = this._conditionalRules.map((rule) =>
+			rule.id === id ? { ...rule, ...updates } : rule
+		);
+	}
+
+	#onFieldChange(id: string, event: UUISelectEvent) {
+		this.#updateConditionalRule(id, { fieldAlias: event.target.value as string });
+	}
+
+	#onOperatorChange(id: string, event: UUISelectEvent) {
+		this.#updateConditionalRule(id, { operator: event.target.value as ConditionalOperator });
+	}
+
+	#onValueChange(id: string, event: UUIInputEvent) {
+		this.#updateConditionalRule(id, { value: event.target.value.toString() });
+	}
+
+	#onLogicalOperatorChange(id: string, event: UUISelectEvent) {
+		this.#updateConditionalRule(id, { logicalOperator: event.target.value as LogicalOperator });
+	}
+
+	#operatorRequiresValue(operator: ConditionalOperator): boolean {
+		return !['isEmpty', 'isNotEmpty'].includes(operator);
 	}
 
 	override render() {
@@ -82,21 +159,111 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			>
 
 			${this._data?.validation?.mandatory
-				? html`<umb-property-layout label="#validation_mandatoryMessageLabel" orientation="vertical"
-						><uui-input
-							name="mandatory-message"
-							slot="editor"
-							value=${this._data.validation?.mandatoryMessage ?? ''}
-							@change=${this.#onMandatoryMessageChange}
-							style="margin-top: var(--uui-size-space-1)"
-							id="mandatory-message"
-							placeholder=${this.localize.string(UMB_VALIDATION_EMPTY_LOCALIZATION_KEY)}
-							label=${this.localize.term('validation_mandatoryMessage')}></uui-input
-					></umb-property-layout>
-					<!-- INSERT GROUP HERE -->
-					
+				? html`
+					${this.#renderConditionals()}
 					`
 				: ''} `;
+	}
+
+	#renderConditionals() {
+		return html`
+			<div class="conditionals-section">
+				<umb-property-layout orientation="vertical">
+					<div slot="editor" class="conditionals-container">
+						${this._conditionalRules.map((rule, index) => this.#renderConditionalRule(rule, index))}
+
+						<uui-button
+							look="placeholder"
+							label="Add Conditional"
+							@click=${this.#addConditionalRule}
+							color="default">
+							<uui-icon name="icon-add"></uui-icon>
+							Add Conditional Rule
+						</uui-button>
+					</div>
+				</umb-property-layout>
+			</div>
+		`;
+	}
+
+	#renderConditionalRule(rule: ConditionalRule, index: number) {
+		const operators: Array<{ value: ConditionalOperator; name: string }> = [
+			{ value: 'equals', name: 'Equals' },
+			{ value: 'notEquals', name: 'Does Not Equal' },
+			{ value: 'contains', name: 'Contains' },
+			{ value: 'notContains', name: 'Does Not Contain' },
+			{ value: 'greaterThan', name: 'Greater Than' },
+			{ value: 'lessThan', name: 'Less Than' },
+			{ value: 'isEmpty', name: 'Is Empty' },
+			{ value: 'isNotEmpty', name: 'Is Not Empty' },
+		];
+		
+		const groupingOperators: Array<{ value: LogicalOperator; name: string }> = [
+			{ value: 'or', name: 'Or' },
+			{ value: 'and', name: 'And' }
+		];
+
+		return html`
+			${index > 0
+				? html`
+					<div class="logical-operator-row">
+						<uui-select
+							.value=${rule.logicalOperator || 'and'}
+							@change=${(e: UUISelectEvent) => this.#onLogicalOperatorChange(rule.id, e)}
+							label="Logical Operator"
+							.options=${groupingOperators}
+							>
+						</uui-select>
+					</div>
+				`
+				: ''}
+
+			<div class="conditional-rule">
+				<div class="rule-fields">
+					<div class="rule-field">
+						<label>Field</label>
+						<uui-select
+							@change=${(e: UUISelectEvent) => this.#onFieldChange(rule.id, e)}
+							placeholder="Select a field"
+							label="Field"
+							.options=${this._availableFields}>
+						</uui-select>
+					</div>
+
+					<div class="rule-field">
+						<label>Condition</label>
+						<uui-select
+							@change=${(e: UUISelectEvent) => this.#onOperatorChange(rule.id, e)}
+							label="Operator"
+							.options=${operators}>
+						</uui-select>
+					</div>
+
+					${this.#operatorRequiresValue(rule.operator)
+						? html`
+							<div class="rule-field">
+								<label>Value</label>
+								<uui-input
+									.value=${rule.value}
+									@input=${(e: UUIInputEvent) => this.#onValueChange(rule.id, e)}
+									placeholder="Enter value"
+									label="Value">
+								</uui-input>
+							</div>
+						`
+						: ''}
+				</div>
+
+				<uui-button
+					look="primary"
+					color="danger"
+					compact
+					@click=${() => this.#removeConditionalRule(rule.id)}
+					label="Remove rule">
+					<uui-icon name="icon-delete"></uui-icon>
+				</uui-button>
+			</div>
+		`;
 	}
 
 	static override styles = [
@@ -199,6 +366,65 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			.container {
 				display: flex;
 				flex-direction: column;
+			}
+
+			.conditionals-section {
+				margin-top: var(--uui-size-space-4);
+			}
+
+			.conditionals-container {
+				display: flex;
+				flex-direction: column;
+				gap: var(--uui-size-space-4);
+			}
+
+			.logical-operator-row {
+				display: flex;
+				justify-content: center;
+				margin: var(--uui-size-space-2) 0;
+			}
+
+			.logical-operator-row uui-select {
+				width: 120px;
+				text-align: center;
+			}
+
+			.conditional-rule {
+				display: flex;
+				gap: var(--uui-size-space-3);
+				align-items: flex-end;
+				padding: var(--uui-size-space-4);
+				border: 1px solid var(--uui-color-border);
+				border-radius: var(--uui-border-radius);
+				background-color: var(--uui-color-surface);
+			}
+
+			.rule-fields {
+				display: flex;
+				flex-direction: column;
+				gap: var(--uui-size-space-3);
+				flex: 1;
+			}
+
+			.rule-field {
+				display: flex;
+				flex-direction: column;
+				gap: var(--uui-size-space-1);
+			}
+
+			.rule-field label {
+				font-size: 0.875rem;
+				font-weight: 600;
+				color: var(--uui-color-text);
+			}
+
+			.rule-field uui-select,
+			.rule-field uui-input {
+				width: 100%;
+			}
+
+			uui-button[look="placeholder"] {
+				margin-top: var(--uui-size-space-2);
 			}
 		`,
 	];
