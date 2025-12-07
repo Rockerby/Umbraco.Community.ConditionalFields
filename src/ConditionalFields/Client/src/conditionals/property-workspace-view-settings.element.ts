@@ -1,4 +1,5 @@
 import { UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/property-type';
+import { UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/document-type';
 import { css, html, customElement, state } from '@umbraco-cms/backoffice/external/lit';
 import { UMB_VALIDATION_EMPTY_LOCALIZATION_KEY } from '@umbraco-cms/backoffice/validation';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -21,7 +22,8 @@ interface ConditionalRule {
 
 @customElement('cndflds-property-type-workspace-view-settings')
 export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitElement implements UmbWorkspaceViewElement {
-	#context?: typeof UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT.TYPE;
+	#propertyTypeContext?: typeof UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT.TYPE;
+	#documentTypeContext?: typeof UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT.TYPE;
 
 	@state()
 	private _data?: UmbPropertyTypeScaffoldModel;
@@ -32,48 +34,68 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	@state()
 	private _availableFields: Array<{ value: string; name: string }> = [];
 
+	@state()
+	private _currentPropertyAlias?: string;
+
 	constructor() {
 		super();
 
-		console.log("out");
-
+		// Consume the property type workspace context (current property being edited)
 		this.consumeContext(UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT, (instance) => {
-			this.#context = instance;
+			this.#propertyTypeContext = instance;
 			this.observe(instance?.data, (data) => {
 				this._data = data;
+				this._currentPropertyAlias = data?.alias;
+				// Reload available fields when property data changes
 				this.#loadAvailableFields();
 			}, 'observeData');
-			//   this.observe(instance?.isNew, (isNew) => (this._isNew = isNew), '_observeIsNew');
 		});
 
-		// this.consumeContext(UMB_CONTENT_TYPE_WORKSPACE_CONTEXT, (instance) => {
-		//   this.observe(
-		//     instance?.variesByCulture,
-		//     (variesByCulture) => (this._contentTypeVariesByCulture = variesByCulture),
-		//     'observeVariesByCulture',
-		//   );
-		//   this.observe(
-		//     instance?.variesBySegment,
-		//     (variesBySegment) => (this._contentTypeVariesBySegment = variesBySegment),
-		//     'observeVariesBySegment',
-		//   );
-		//   this._entityType = instance?.getEntityType();
-		// }).passContextAliasMatches();
+		// Consume the document type workspace context to access all properties
+		// Using .passContextAliasMatches() allows us to get the parent context
+		this.consumeContext(UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT, (instance) => {
+			this.#documentTypeContext = instance;
+
+			// Observe the structure to get property changes
+			this.observe(
+				instance?.structure.contentTypeProperties,
+				(properties) => {
+					this.#loadAvailableFields();
+				},
+				'observeContentTypeProperties'
+			);
+		}).passContextAliasMatches();
 	}
 
 	async #loadAvailableFields() {
-		// TODO: Load available fields from the content type
-		// For now, populate with placeholder data
-		// You'll need to get the content type from the parent context and extract its properties
-		this._availableFields = [
-			{ value: 'title', name: 'Title' },
-			{ value: 'description', name: 'Description' },
-			{ value: 'isActive', name: 'Is Active' },
-		];
+		if (!this.#documentTypeContext) {
+			console.warn('Document type context not available yet');
+			return;
+		}
+
+		try {
+			// Get all properties from the document type structure (including compositions)
+			const allProperties = await this.#documentTypeContext.structure.getContentTypeProperties();
+
+			// Filter out the current property being edited (optional - prevents self-reference)
+			// and map to the format needed for the dropdown
+			this._availableFields = allProperties
+				.filter(prop => prop.alias !== this._currentPropertyAlias)
+				.map(prop => ({
+					value: prop.alias ?? '',
+					name: `${prop.name} (${prop.alias})`
+				}))
+				.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+
+			console.log('Loaded available fields:', this._availableFields);
+		} catch (error) {
+			console.error('Error loading available fields:', error);
+			this._availableFields = [];
+		}
 	}
 
 	updateValue(partialValue: Partial<UmbPropertyTypeScaffoldModel>) {
-		this.#context?.updateData(partialValue);
+		this.#propertyTypeContext?.updateData(partialValue);
 	}
 
 	#onConditionalChange(event: UUIBooleanInputEvent) {
