@@ -1,0 +1,14 @@
+{
+  "id": "ConditionalFields",
+  "name": "ConditionalFields",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Conditional Fields Bundle",
+      "alias": "ConditionalFields.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/ConditionalFields/conditional-fields.js"
+    }
+  ]
+}
