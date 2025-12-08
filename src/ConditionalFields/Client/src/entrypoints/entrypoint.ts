@@ -13,7 +13,7 @@ export const onInit: UmbEntryPointOnInit = (_host, _extensionRegistry) => {
   _host.consumeContext(UMB_AUTH_CONTEXT, async (authContext) => {
     // Get the token info from Umbraco
     const config = authContext?.getOpenApiConfiguration();
-
+    console.log("setting config", config);
     client.setConfig({
       auth: config?.token ?? undefined,
       baseUrl: config?.base ?? "",

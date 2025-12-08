@@ -4,7 +4,7 @@ const t = [
     name: "Conditional Fields Entrypoint",
     alias: "ConditionalFields.Entrypoint",
     type: "backofficeEntryPoint",
-    js: () => import("./entrypoint-DcFFqYMe.js")
+    js: () => import("./entrypoint-Co5MVdg3.js")
   }
 ], o = "Umb.Workspace.PropertyType";
 console.log("in");
@@ -13,7 +13,7 @@ const i = [
     type: "workspaceView",
     alias: "CndFlds.WorkspaceView.PropertyType.Settings",
     name: "Property Type Settings Workspace View",
-    element: () => import("./property-workspace-view-settings.element-CEoC4R1m.js"),
+    element: () => import("./property-workspace-view-settings.element-soHqiRjI.js"),
     weight: 950,
     meta: {
       label: "Conditional",

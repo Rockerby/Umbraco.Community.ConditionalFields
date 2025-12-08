@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { PingData, PingErrors, PingResponses, WhatsMyNameData, WhatsMyNameErrors, WhatsMyNameResponses, WhatsTheTimeMrWolfData, WhatsTheTimeMrWolfErrors, WhatsTheTimeMrWolfResponses, WhoAmIData, WhoAmIErrors, WhoAmIResponses } from './types.gen';
+import type { DeleteConfigurationData, DeleteConfigurationErrors, DeleteConfigurationResponses, GetAllConfigurationsData, GetAllConfigurationsErrors, GetAllConfigurationsResponses, GetConfigurationData, GetConfigurationErrors, GetConfigurationResponses, PingData, PingErrors, PingResponses, SaveConfigurationData, SaveConfigurationErrors, SaveConfigurationResponses, WhatsMyNameData, WhatsMyNameErrors, WhatsMyNameResponses, WhatsTheTimeMrWolfData, WhatsTheTimeMrWolfErrors, WhatsTheTimeMrWolfResponses, WhoAmIData, WhoAmIErrors, WhoAmIResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -18,7 +18,65 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
     meta?: Record<string, unknown>;
 };
 
-export class WebsiteClientService {
+export class ConditionalFieldsService {
+    public static deleteConfiguration<ThrowOnError extends boolean = false>(options: Options<DeleteConfigurationData, ThrowOnError>) {
+        return (options.client ?? client).delete<DeleteConfigurationResponses, DeleteConfigurationErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/conditionalfields/{propertyTypeKey}',
+            ...options
+        });
+    }
+    
+    public static getConfiguration<ThrowOnError extends boolean = false>(options: Options<GetConfigurationData, ThrowOnError>) {
+        return (options.client ?? client).get<GetConfigurationResponses, GetConfigurationErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/conditionalfields/{propertyTypeKey}',
+            ...options
+        });
+    }
+    
+    public static saveConfiguration<ThrowOnError extends boolean = false>(options: Options<SaveConfigurationData, ThrowOnError>) {
+        return (options.client ?? client).post<SaveConfigurationResponses, SaveConfigurationErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/conditionalfields/{propertyTypeKey}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static getAllConfigurations<ThrowOnError extends boolean = false>(options?: Options<GetAllConfigurationsData, ThrowOnError>) {
+        return (options?.client ?? client).get<GetAllConfigurationsResponses, GetAllConfigurationsErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/conditionalfields/all',
+            ...options
+        });
+    }
+}
+
+export class ConditionalfieldsService {
     public static ping<ThrowOnError extends boolean = false>(options?: Options<PingData, ThrowOnError>) {
         return (options?.client ?? client).get<PingResponses, PingErrors, ThrowOnError>({
             security: [
@@ -27,7 +85,7 @@ export class WebsiteClientService {
                     type: 'http'
                 }
             ],
-            url: '/umbraco/websiteclient/api/v1/ping',
+            url: '/umbraco/management/api/v1/conditionalfields/ping',
             ...options
         });
     }
@@ -40,7 +98,7 @@ export class WebsiteClientService {
                     type: 'http'
                 }
             ],
-            url: '/umbraco/websiteclient/api/v1/whatsMyName',
+            url: '/umbraco/management/api/v1/conditionalfields/whatsMyName',
             ...options
         });
     }
@@ -53,7 +111,7 @@ export class WebsiteClientService {
                     type: 'http'
                 }
             ],
-            url: '/umbraco/websiteclient/api/v1/whatsTheTimeMrWolf',
+            url: '/umbraco/management/api/v1/conditionalfields/whatsTheTimeMrWolf',
             ...options
         });
     }
@@ -66,7 +124,7 @@ export class WebsiteClientService {
                     type: 'http'
                 }
             ],
-            url: '/umbraco/websiteclient/api/v1/whoAmI',
+            url: '/umbraco/management/api/v1/conditionalfields/whoAmI',
             ...options
         });
     }

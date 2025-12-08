@@ -7,7 +7,6 @@ using Umbraco.Cms.Core.Security;
 namespace ConditionalFields.Controllers
 {
     [ApiVersion("1.0")]
-    [ApiExplorerSettings(GroupName = "ConditionalFields")]
     public class ConditionalFieldsApiController : ConditionalFieldsApiControllerBase
     {
         private readonly IBackOfficeSecurityAccessor _backOfficeSecurityAccessor;

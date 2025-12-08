@@ -1,7 +1,6 @@
 import { UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/property-type';
 import { UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/document-type';
 import { css, html, customElement, state } from '@umbraco-cms/backoffice/external/lit';
-import { UMB_VALIDATION_EMPTY_LOCALIZATION_KEY } from '@umbraco-cms/backoffice/validation';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UmbTextStyles } from '@umbraco-cms/backoffice/style';
 import type { UmbPropertyTypeScaffoldModel } from '@umbraco-cms/backoffice/content-type';
@@ -37,6 +36,15 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	@state()
 	private _currentPropertyAlias?: string;
 
+	@state()
+	private _currentPropertyKey?: string;
+
+	@state()
+	private _isConditional: boolean = false;
+
+	@state()
+	private _isSaving: boolean = false;
+
 	constructor() {
 		super();
 
@@ -46,8 +54,11 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			this.observe(instance?.data, (data) => {
 				this._data = data;
 				this._currentPropertyAlias = data?.alias;
-				// Reload available fields when property data changes
+				this._currentPropertyKey = data?.id;
+
+				// Load the configuration when property data changes
 				this.#loadAvailableFields();
+				this.#loadConfiguration();
 			}, 'observeData');
 		});
 
@@ -59,7 +70,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			// Observe the structure to get property changes
 			this.observe(
 				instance?.structure.contentTypeProperties,
-				(properties) => {
+				() => {
 					this.#loadAvailableFields();
 				},
 				'observeContentTypeProperties'
@@ -94,22 +105,75 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		}
 	}
 
+	async #loadConfiguration() {
+		console.log("loading", this._currentPropertyKey);
+		if (!this._currentPropertyKey) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`/umbraco/management/api/v1/conditionalfields/${this._currentPropertyKey}`);
+
+			if (response.ok) {
+				const configuration = await response.json();
+				this._isConditional = configuration.isConditional ?? false;
+				this._conditionalRules = configuration.rules ?? [];
+			}
+		} catch (error) {
+			console.error('Error loading conditional configuration:', error);
+		}
+	}
+
+	async #saveConfiguration() {
+		if (!this._currentPropertyKey) {
+			console.error('Cannot save: property key not available');
+			return;
+		}
+
+		if(this._isSaving) return; // Prevent concurrent saves
+
+		this._isSaving = true;
+
+		try {
+			const configuration = {
+				isConditional: this._isConditional,
+				rules: this._conditionalRules
+			};
+
+			const response = await fetch(`/umbraco/management/api/v1/conditionalfields/${this._currentPropertyKey}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(configuration)
+			});
+
+			if (response.ok) {
+				console.log('Configuration saved successfully');
+				// Optionally show a notification
+			} else {
+				console.error('Failed to save configuration:', await response.text());
+			}
+		} catch (error) {
+			console.error('Error saving conditional configuration:', error);
+		} finally {
+			this._isSaving = false;
+		}
+	}
+
 	updateValue(partialValue: Partial<UmbPropertyTypeScaffoldModel>) {
 		this.#propertyTypeContext?.updateData(partialValue);
 	}
 
 	#onConditionalChange(event: UUIBooleanInputEvent) {
-		const mandatory = event.target.checked;
-		this.updateValue({
-			validation: { ...this._data?.validation, mandatory },
-		});
-	}
+		this._isConditional = event.target.checked;
 
-	#onMandatoryMessageChange(event: UUIInputEvent) {
-		const mandatoryMessage = event.target.value.toString();
-		this.updateValue({
-			validation: { ...this._data?.validation, mandatory: this._data?.validation.mandatory ?? false, mandatoryMessage },
-		});
+		// If disabling conditionals, clear the rules
+		if (!this._isConditional) {
+			this._conditionalRules = [];
+		}
+
+		this.#saveConfiguration();
 	}
 
 	#addConditionalRule() {
@@ -121,6 +185,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			logicalOperator: this._conditionalRules.length > 0 ? 'and' : undefined,
 		};
 		this._conditionalRules = [...this._conditionalRules, newRule];
+		this.#saveConfiguration();
 	}
 
 	#removeConditionalRule(id: string) {
@@ -129,12 +194,14 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		if (this._conditionalRules.length > 0) {
 			this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: undefined };
 		}
+		this.#saveConfiguration();
 	}
 
 	#updateConditionalRule(id: string, updates: Partial<ConditionalRule>) {
 		this._conditionalRules = this._conditionalRules.map((rule) =>
 			rule.id === id ? { ...rule, ...updates } : rule
 		);
+		this.#saveConfiguration();
 	}
 
 	#onFieldChange(id: string, event: UUISelectEvent) {
@@ -173,14 +240,14 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		return html`<umb-property-layout orientation="vertical">
 				<uui-toggle
 					@change=${this.#onConditionalChange}
-					id="mandatory"
-					.checked=${this._data?.validation?.mandatory ?? false}
+					id="conditional"
+					.checked=${this._isConditional}
 					slot="editor"
 					><umb-localize key="validation_fieldIsConditional">Field is conditional</umb-localize></uui-toggle
 				></umb-property-layout
 			>
 
-			${this._data?.validation?.mandatory
+			${this._isConditional
 				? html`
 					${this.#renderConditionals()}
 					`

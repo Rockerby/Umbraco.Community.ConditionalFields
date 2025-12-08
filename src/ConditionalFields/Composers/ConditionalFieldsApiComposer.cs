@@ -7,6 +7,8 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Api.Management.OpenApi;
 using Umbraco.Cms.Api.Common.OpenApi;
+using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace ConditionalFields.Composers
 {
@@ -14,10 +16,9 @@ namespace ConditionalFields.Composers
     {
         public void Compose(IUmbracoBuilder builder)
         {
-
             builder.Services.AddSingleton<IOperationIdHandler, CustomOperationHandler>();
 
-            /*builder.Services.Configure<SwaggerGenOptions>(opt =>
+            builder.Services.Configure<SwaggerGenOptions>(opt =>
             {
                 // Related documentation:
                 // https://docs.umbraco.com/umbraco-cms/tutorials/creating-a-backoffice-api
@@ -31,19 +32,12 @@ namespace ConditionalFields.Composers
                 opt.SwaggerDoc(Constants.ApiName, new OpenApiInfo
                 {
                     Title = "Conditional Fields Backoffice API",
-                    Version = "1.0",
-                    // Contact = new OpenApiContact
-                    // {
-                    //     Name = "Some Developer",
-                    //     Email = "you@company.com",
-                    //     Url = new Uri("https://company.com")
-                    // }
+                    Version = "Latest",
                 });
 
-                // Enable Umbraco authentication for the "Example" Swagger document
-                // PR: https://github.com/umbraco/Umbraco-CMS/pull/15699
+                // Enable Umbraco authentication for the Swagger document
                 opt.OperationFilter<ConditionalFieldsOperationSecurityFilter>();
-            });*/
+            });
         }
 
         public class ConditionalFieldsOperationSecurityFilter : BackOfficeSecurityRequirementsOperationFilterBase
