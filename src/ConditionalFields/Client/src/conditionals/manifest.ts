@@ -1,7 +1,6 @@
 import { UMB_WORKSPACE_CONDITION_ALIAS } from '@umbraco-cms/backoffice/workspace';
 export const UMB_PROPERTY_TYPE_WORKSPACE_ALIAS = 'Umb.Workspace.PropertyType';
-
-console.log("in");
+export const UMB_DOCUMENT_WORKSPACE_ALIAS = 'Umb.Workspace.Document';
 
 export const manifests: Array<UmbExtensionManifest> = [
   {
@@ -19,6 +18,18 @@ export const manifests: Array<UmbExtensionManifest> = [
       {
         alias: UMB_WORKSPACE_CONDITION_ALIAS,
         match: UMB_PROPERTY_TYPE_WORKSPACE_ALIAS,
+      },
+    ],
+  },
+  {
+    type: 'workspaceContext',
+    name: 'Document Conditional Workspace Context',
+    alias: 'CndFlds.WorkspaceContext.Document.Conditional',
+    api: () => import('./document-conditional-workspace.context.js'),
+    conditions: [
+      {
+        alias: UMB_WORKSPACE_CONDITION_ALIAS,
+        match: UMB_DOCUMENT_WORKSPACE_ALIAS,
       },
     ],
   },

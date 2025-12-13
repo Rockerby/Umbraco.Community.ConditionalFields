@@ -6,23 +6,15 @@ import { UmbTextStyles } from '@umbraco-cms/backoffice/style';
 import type { UmbPropertyTypeScaffoldModel } from '@umbraco-cms/backoffice/content-type';
 import type { UmbWorkspaceViewElement } from '@umbraco-cms/backoffice/workspace';
 import type { UUIBooleanInputEvent, UUIInputEvent, UUISelectEvent } from '@umbraco-cms/backoffice/external/uui';
-
-// Type definitions for conditional logic
-type ConditionalOperator = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'greaterThan' | 'lessThan' | 'isEmpty' | 'isNotEmpty';
-type LogicalOperator = 'and' | 'or';
-
-interface ConditionalRule {
-	id: string;
-	fieldAlias: string;
-	operator: ConditionalOperator;
-	value: string;
-	logicalOperator?: LogicalOperator;
-}
+import { UMB_DOCUMENT_CONDITIONAL_WORKSPACE_CONTEXT } from './document-conditional-workspace.context.js';
+import type { ConditionalOperator, LogicalOperator, ConditionalRule, DependencyInfo } from './types.js';
+import { ConditionalFieldsService } from "../api/index.js";
 
 @customElement('cndflds-property-type-workspace-view-settings')
 export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitElement implements UmbWorkspaceViewElement {
 	#propertyTypeContext?: typeof UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT.TYPE;
 	#documentTypeContext?: typeof UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT.TYPE;
+	#conditionalContext?: typeof UMB_DOCUMENT_CONDITIONAL_WORKSPACE_CONTEXT.TYPE;
 
 	@state()
 	private _data?: UmbPropertyTypeScaffoldModel;
@@ -45,6 +37,9 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	@state()
 	private _isSaving: boolean = false;
 
+	@state()
+	private _dependentFields: DependencyInfo[] = [];
+
 	constructor() {
 		super();
 
@@ -54,7 +49,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			this.observe(instance?.data, (data) => {
 				this._data = data;
 				this._currentPropertyAlias = data?.alias;
-				this._currentPropertyKey = data?.id;
+				this._currentPropertyKey = data?.unique;
 
 				// Load the configuration when property data changes
 				this.#loadAvailableFields();
@@ -76,6 +71,18 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 				'observeContentTypeProperties'
 			);
 		}).passContextAliasMatches();
+
+		// Consume the conditional workspace context (optional - only exists in document editor)
+		// Use try-catch as .optional() may not be available in all Umbraco versions
+		try {
+			this.consumeContext(UMB_DOCUMENT_CONDITIONAL_WORKSPACE_CONTEXT, (instance) => {
+				this.#conditionalContext = instance;
+				// Load dependencies when context becomes available
+				this.#loadDependencies();
+			});
+		} catch (error) {
+			// Context not available - this is expected when editing property types outside document context
+		}
 	}
 
 	async #loadAvailableFields() {
@@ -97,8 +104,6 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 					name: `${prop.name} (${prop.alias})`
 				}))
 				.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
-
-			console.log('Loaded available fields:', this._availableFields);
 		} catch (error) {
 			console.error('Error loading available fields:', error);
 			this._availableFields = [];
@@ -106,21 +111,43 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	}
 
 	async #loadConfiguration() {
-		console.log("loading", this._currentPropertyKey);
 		if (!this._currentPropertyKey) {
 			return;
 		}
 
 		try {
-			const response = await fetch(`/umbraco/management/api/v1/conditionalfields/${this._currentPropertyKey}`);
-
-			if (response.ok) {
-				const configuration = await response.json();
-				this._isConditional = configuration.isConditional ?? false;
-				this._conditionalRules = configuration.rules ?? [];
+			const { data, error } = await ConditionalFieldsService.getConfiguration({
+				path: {
+					propertyTypeKey: this._currentPropertyKey
+				}
+			});
+			var propKey= this._currentPropertyKey;
+			console.log("Loaded configuration", { propKey, data, error });	
+			if (data) {
+				this._isConditional = data.isConditional ?? false;
+				this._conditionalRules = data.rules ?? [];
+			} else if (error) {
+				console.error('Error loading conditional configuration:', error);
 			}
 		} catch (error) {
 			console.error('Error loading conditional configuration:', error);
+		}
+
+		// Also load dependencies
+		this.#loadDependencies();
+	}
+
+	#loadDependencies() {
+		if (!this._currentPropertyKey || !this.#conditionalContext) {
+			this._dependentFields = [];
+			return;
+		}
+
+		try {
+			this._dependentFields = this.#conditionalContext.getDependenciesFor(this._currentPropertyKey);
+		} catch (error) {
+			console.error('Error loading dependencies:', error);
+			this._dependentFields = [];
 		}
 	}
 
@@ -135,24 +162,18 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		this._isSaving = true;
 
 		try {
-			const configuration = {
-				isConditional: this._isConditional,
-				rules: this._conditionalRules
-			};
-
-			const response = await fetch(`/umbraco/management/api/v1/conditionalfields/${this._currentPropertyKey}`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
+			const { error } = await ConditionalFieldsService.saveConfiguration({
+				path: {
+					propertyTypeKey: this._currentPropertyKey
 				},
-				body: JSON.stringify(configuration)
+				body: {
+					isConditional: this._isConditional,
+					rules: this._conditionalRules
+				}
 			});
 
-			if (response.ok) {
-				console.log('Configuration saved successfully');
-				// Optionally show a notification
-			} else {
-				console.error('Failed to save configuration:', await response.text());
+			if (error) {
+				console.error('Failed to save configuration:', error);
 			}
 		} catch (error) {
 			console.error('Error saving conditional configuration:', error);
@@ -180,9 +201,9 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		const newRule: ConditionalRule = {
 			id: crypto.randomUUID(),
 			fieldAlias: '',
-			operator: 'equals',
+			operator: 'Equals',
 			value: '',
-			logicalOperator: this._conditionalRules.length > 0 ? 'and' : undefined,
+			logicalOperator: this._conditionalRules.length > 0 ? 'And' : 'And',
 		};
 		this._conditionalRules = [...this._conditionalRules, newRule];
 		this.#saveConfiguration();
@@ -190,9 +211,9 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 
 	#removeConditionalRule(id: string) {
 		this._conditionalRules = this._conditionalRules.filter((rule) => rule.id !== id);
-		// If we removed the first rule and there are more rules, remove the logical operator from the new first rule
+		// Ensure first rule always has 'And' as logical operator (API requirement)
 		if (this._conditionalRules.length > 0) {
-			this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: undefined };
+			this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: 'And' };
 		}
 		this.#saveConfiguration();
 	}
@@ -221,18 +242,49 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	}
 
 	#operatorRequiresValue(operator: ConditionalOperator): boolean {
-		return !['isEmpty', 'isNotEmpty'].includes(operator);
+		return !['IsEmpty', 'IsNotEmpty'].includes(operator);
 	}
 
 	override render() {
 		if (!this._data) return;
 		return html`
+			${this.#renderDependencyWarning()}
 
 			<uui-box class="uui-text">
 				<umb-localize key="validation_conditional" slot="headline">Conditional</umb-localize>
 				${this.#renderMandatory()}</uui-box
 			>
 
+		`;
+	}
+
+	#renderDependencyWarning() {
+		if (!this._dependentFields || this._dependentFields.length === 0) {
+			return '';
+		}
+
+		return html`
+			<uui-box class="dependency-warning">
+				<div class="warning-content">
+					<div class="warning-header">
+						<uui-icon name="icon-alert"></uui-icon>
+						<strong>Dependency Warning</strong>
+					</div>
+					<p>
+						${this._dependentFields.length === 1
+							? html`<strong>1 other field</strong> depends on this field:`
+							: html`<strong>${this._dependentFields.length} other fields</strong> depend on this field:`}
+					</p>
+					<ul class="dependency-list">
+						${this._dependentFields.map(
+							(field) => html`<li>${field.name} <span class="field-alias">(${field.alias})</span></li>`
+						)}
+					</ul>
+					<p class="warning-note">
+						Changes to this field's configuration may affect the visibility of these dependent fields.
+					</p>
+				</div>
+			</uui-box>
 		`;
 	}
 
@@ -277,19 +329,19 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 
 	#renderConditionalRule(rule: ConditionalRule, index: number) {
 		const operators: Array<{ value: ConditionalOperator; name: string }> = [
-			{ value: 'equals', name: 'Equals' },
-			{ value: 'notEquals', name: 'Does Not Equal' },
-			{ value: 'contains', name: 'Contains' },
-			{ value: 'notContains', name: 'Does Not Contain' },
-			{ value: 'greaterThan', name: 'Greater Than' },
-			{ value: 'lessThan', name: 'Less Than' },
-			{ value: 'isEmpty', name: 'Is Empty' },
-			{ value: 'isNotEmpty', name: 'Is Not Empty' },
+			{ value: 'Equals', name: 'Equals' },
+			{ value: 'NotEquals', name: 'Does Not Equal' },
+			{ value: 'Contains', name: 'Contains' },
+			{ value: 'NotContains', name: 'Does Not Contain' },
+			{ value: 'GreaterThan', name: 'Greater Than' },
+			{ value: 'LessThan', name: 'Less Than' },
+			{ value: 'IsEmpty', name: 'Is Empty' },
+			{ value: 'IsNotEmpty', name: 'Is Not Empty' },
 		];
-		
+
 		const groupingOperators: Array<{ value: LogicalOperator; name: string }> = [
-			{ value: 'or', name: 'Or' },
-			{ value: 'and', name: 'And' }
+			{ value: 'Or', name: 'Or' },
+			{ value: 'And', name: 'And' }
 		];
 
 		return html`
@@ -297,7 +349,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 				? html`
 					<div class="logical-operator-row">
 						<uui-select
-							.value=${rule.logicalOperator || 'and'}
+							.value=${rule.logicalOperator || 'And'}
 							@change=${(e: UUISelectEvent) => this.#onLogicalOperatorChange(rule.id, e)}
 							label="Logical Operator"
 							.options=${groupingOperators}
@@ -514,6 +566,61 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 
 			uui-button[look="placeholder"] {
 				margin-top: var(--uui-size-space-2);
+			}
+
+			.dependency-warning {
+				margin-bottom: var(--uui-size-layout-1);
+				border-left: 3px solid var(--uui-color-warning);
+				background-color: var(--uui-color-warning-bg, #fff3cd);
+			}
+
+			.warning-content {
+				padding: var(--uui-size-space-4);
+			}
+
+			.warning-header {
+				display: flex;
+				align-items: center;
+				gap: var(--uui-size-space-2);
+				margin-bottom: var(--uui-size-space-3);
+				color: var(--uui-color-warning-emphasis, #856404);
+			}
+
+			.warning-header uui-icon {
+				font-size: 1.2rem;
+			}
+
+			.warning-header strong {
+				font-size: 1rem;
+			}
+
+			.warning-content p {
+				margin: var(--uui-size-space-2) 0;
+				color: var(--uui-color-warning-emphasis, #856404);
+			}
+
+			.dependency-list {
+				margin: var(--uui-size-space-3) 0;
+				padding-left: var(--uui-size-space-6);
+				list-style: disc;
+			}
+
+			.dependency-list li {
+				margin: var(--uui-size-space-1) 0;
+				color: var(--uui-color-warning-emphasis, #856404);
+			}
+
+			.field-alias {
+				font-family: monospace;
+				opacity: 0.8;
+				font-size: 0.9em;
+			}
+
+			.warning-note {
+				font-size: 0.875rem;
+				font-style: italic;
+				opacity: 0.9;
+				margin-top: var(--uui-size-space-3);
 			}
 		`,
 	];
