@@ -1,7 +1,6 @@
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
 import { UMB_DOCUMENT_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/document';
-import { UMB_PROPERTY_DATASET_CONTEXT } from '@umbraco-cms/backoffice/property';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import type { PropertyConditionalConfiguration, DependencyInfo } from './types.js';
 import { ConditionalEvaluator } from './conditional-evaluator.service.js';
@@ -18,7 +17,6 @@ export const UMB_DOCUMENT_CONDITIONAL_WORKSPACE_CONTEXT = new UmbContextToken<Um
  */
 export class UmbDocumentConditionalWorkspaceContext extends UmbContextBase {
 	#documentContext?: typeof UMB_DOCUMENT_WORKSPACE_CONTEXT.TYPE;
-	#datasetContext?: typeof UMB_PROPERTY_DATASET_CONTEXT.TYPE;
 
 	// Map of property type key to configuration
 	#configurations = new Map<string, PropertyConditionalConfiguration>();
@@ -42,46 +40,66 @@ export class UmbDocumentConditionalWorkspaceContext extends UmbContextBase {
 	}
 
 	async #init() {
-		console.log("in conditionals init");
-		// Consume the document workspace context
-		this.consumeContext(UMB_DOCUMENT_WORKSPACE_CONTEXT, (context) => {
+		console.log("[ConditionalFields] Initializing workspace context");
+
+		// Consume the document workspace context first
+		this.consumeContext(UMB_DOCUMENT_WORKSPACE_CONTEXT, async (context) => {
+			console.log("[ConditionalFields] Document workspace context consumed");
 			this.#documentContext = context;
 
 			// Get the content type ID and initialize
 			const initializeContext = async () => {
-				
 				const contentTypeId = context?.getContentTypeUnique();
-				
-				
-				if (contentTypeId) {
 
-					console.log("Init - contentTypeId", contentTypeId);
+				if (contentTypeId) {
+					console.log("[ConditionalFields] Init - contentTypeId", contentTypeId);
 					this.#documentTypeKey = contentTypeId;
 					await this.#setupPropertyMappings();
 					await this.#loadConfigurations();
+
+					// Setup observers using the document workspace context directly
 					await this.#setupPropertyObservers();
 					await this.#performInitialEvaluation();
-
 				}
 			};
 
 			// Initialize immediately
-			initializeContext();
+			await initializeContext();
+
+			// Also observe the data to detect property changes
+			this.observe(
+				context?.data,
+				() => {
+					console.log("[ConditionalFields] Data changed");
+					// Re-evaluate all conditional properties
+					this.#onAnyPropertyChanged();
+				},
+				'observeData'
+			);
 
 			// Also observe unique to re-initialize when document changes
 			this.observe(
 				context?.contentTypeUnique,
 				() => {
+					console.log("[ConditionalFields] Document type changed, re-initializing");
 					initializeContext();
 				},
 				'observeDocumentUnique'
 			);
 		});
+	}
 
-		// Consume the property dataset context
-		this.consumeContext(UMB_PROPERTY_DATASET_CONTEXT, (context) => {
-			this.#datasetContext = context;
-		});
+	/**
+	 * Called when any property value changes
+	 * Re-evaluates all conditional properties
+	 */
+	#onAnyPropertyChanged() {
+		console.log("[ConditionalFields] Property value changed, re-evaluating all conditionals");
+		for (const [propertyKey, config] of this.#configurations) {
+			if (config.isConditional) {
+				this.#evaluateAndApplyVisibility(propertyKey);
+			}
+		}
 	}
 
 	/**
@@ -191,74 +209,23 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 
 	/**
 	 * Setup observers for all properties referenced in conditional rules
+	 * Note: We're now using variant data observer instead of individual property observers
 	 */
 	async #setupPropertyObservers() {
-		if (!this.#datasetContext) {
-			console.warn('[ConditionalFields] Dataset context not available yet');
-			return;
-		}
-
-		// Track which fields we need to observe (avoid duplicates)
-		const fieldsToObserve = new Set<string>();
-
-		// Collect all referenced fields from all conditional configurations
-		for (const [, config] of this.#configurations) {
-			if (!config.isConditional || !config.rules) {
-				continue;
-			}
-
-			const referencedFields = ConditionalEvaluator.getReferencedFields(config.rules);
-			for (const fieldAlias of referencedFields) {
-				fieldsToObserve.add(fieldAlias);
-			}
-		}
-
-		// Setup observers for each field
-		for (const fieldAlias of fieldsToObserve) {
-			try {
-				const observable = await this.#datasetContext.propertyValueByAlias(fieldAlias);
-
-				if (observable) {
-					this.observe(
-						observable,
-						() => {
-							this.#onPropertyValueChanged(fieldAlias);
-						},
-						`observe-property-${fieldAlias}`
-					);
-				}
-			} catch (error) {
-				console.warn(`[ConditionalFields] Could not observe property ${fieldAlias}:`, error);
-			}
-		}
+		console.log("[ConditionalFields] Property observers setup (using variant data observer)");
+		// The actual observation is now done via context.currentVariant.data in #init
+		// This method is kept for compatibility but doesn't set up individual observers anymore
 	}
 
-	/**
-	 * Called when a property value changes
-	 * Re-evaluates all properties that depend on the changed property
-	 */
-	#onPropertyValueChanged(changedFieldAlias: string) {
-		// Find all properties that have rules referencing this field
-		for (const [propertyKey, config] of this.#configurations) {
-			if (!config.isConditional || !config.rules) {
-				continue;
-			}
-
-			// Check if any rule references the changed field
-			const referencedFields = ConditionalEvaluator.getReferencedFields(config.rules);
-			if (referencedFields.has(changedFieldAlias)) {
-				this.#evaluateAndApplyVisibility(propertyKey);
-			}
-		}
-	}
 
 	/**
 	 * Perform initial evaluation for all conditional properties
 	 * Called after observers are setup
 	 */
 	async #performInitialEvaluation() {
+		console.log("[ConditionalFields] Performing initial evaluation of conditional properties");
 		// Wait a tick to ensure all properties are rendered
-		await new Promise(resolve => setTimeout(resolve, 5000));
+		await new Promise(resolve => setTimeout(resolve, 200));
 
 		for (const [propertyKey, config] of this.#configurations) {
 			console.log("Initial eval for", {propertyKey, config});
@@ -296,19 +263,15 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 		const values = new Map<string, any>();
 		const referencedFields = ConditionalEvaluator.getReferencedFields(config.rules);
 
+		// Get property values from the document workspace data
+		const documentData = this.#documentContext?.getData();
+
 		for (const fieldAlias of referencedFields) {
 			try {
-				const observable = await this.#datasetContext?.propertyValueByAlias(fieldAlias);
-				if (observable) {
-					// Get the current value from the observable
-					const currentValue = await new Promise((resolve) => {
-						const subscription = observable.subscribe((value) => {
-							subscription.unsubscribe();
-							resolve(value);
-						});
-					});
-					values.set(fieldAlias, currentValue);
-				}
+				// Get the value from the document data using the property alias
+				const propertyValue = documentData?.values?.find((v: any) => v.alias === fieldAlias)?.value;
+				values.set(fieldAlias, propertyValue);
+				console.log(`[ConditionalFields] Got value for ${fieldAlias}:`, propertyValue);
 			} catch (error) {
 				console.warn(`[ConditionalFields] Could not get value for ${fieldAlias}:`, error);
 				values.set(fieldAlias, undefined);
@@ -326,31 +289,42 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 	 * Apply visibility to a property element in the DOM
 	 */
 	#applyVisibilityToDOM(propertyAlias: string, visible: boolean) {
-		// Find the workspace element
-		debugger;
-		const workspaceElement = document.querySelector('umb-content-workspace-view-edit');
-		if (!workspaceElement) {
-			console.warn('[ConditionalFields] Could not find workspace element');
-			return;
-		}
+		console.log(`[ConditionalFields] Applying visibility to ${propertyAlias}: ${visible}`);
 
-		// Try multiple selectors to find the property element
-		// The exact selector may vary based on Umbraco's DOM structure
-		const selectors = [
-			`umb-property[alias="${propertyAlias}"]`,
-			`umb-property[property-alias="${propertyAlias}"]`,
-			`[data-property-alias="${propertyAlias}"]`,
-			`[alias="${propertyAlias}"]`,
-		];
+		// Helper function to search through shadow DOM recursively
+		const findPropertyElement = (root: Document | ShadowRoot | Element): Element | null => {
+			// Try to find the property directly
+			const selectors = [
+				`umb-property[alias="${propertyAlias}"]`,
+				`umb-property[property-alias="${propertyAlias}"]`,
+				`[data-property-alias="${propertyAlias}"]`,
+				`[alias="${propertyAlias}"]`,
+			];
 
-		let propertyElement: Element | null = null;
-
-		for (const selector of selectors) {
-			propertyElement = workspaceElement.querySelector(selector);
-			if (propertyElement) {
-				break;
+			for (const selector of selectors) {
+				const element = root.querySelector(selector);
+				if (element) {
+					console.log(`[ConditionalFields] Found property element using selector: ${selector}`);
+					return element;
+				}
 			}
-		}
+
+			// If not found, traverse into shadow roots
+			const allElements = root.querySelectorAll('*');
+			for (const element of allElements) {
+				if (element.shadowRoot) {
+					const found = findPropertyElement(element.shadowRoot);
+					if (found) {
+						return found;
+					}
+				}
+			}
+
+			return null;
+		};
+
+		// Start searching from the document root
+		const propertyElement = findPropertyElement(document);
 
 		if (!propertyElement) {
 			console.warn(`[ConditionalFields] Could not find property element for: ${propertyAlias}`);
@@ -359,6 +333,7 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 
 		// Apply visibility
 		(propertyElement as HTMLElement).style.display = visible ? '' : 'none';
+		console.log(`[ConditionalFields] Successfully applied visibility to ${propertyAlias}`);
 	}
 
 	/**
