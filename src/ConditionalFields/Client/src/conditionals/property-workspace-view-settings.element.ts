@@ -40,13 +40,26 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	@state()
 	private _dependentFields: DependencyInfo[] = [];
 
+	@state()
+	private _isDirty: boolean = false;
+
+	// Track last saved property to handle workspace save events
+	#lastSavedPropertyId?: string;
+
 	constructor() {
 		super();
 
 		// Consume the property type workspace context (current property being edited)
 		this.consumeContext(UMB_PROPERTY_TYPE_WORKSPACE_CONTEXT, (instance) => {
 			this.#propertyTypeContext = instance;
+
 			this.observe(instance?.data, (data) => {
+				// Save previous configuration if switching to a different property with unsaved changes
+				if (this.#lastSavedPropertyId && this.#lastSavedPropertyId !== data?.unique && this._isDirty) {
+					console.log('[ConditionalFields] Switching properties, saving previous configuration');
+					this.#saveConfiguration();
+				}
+
 				this._data = data;
 				this._currentPropertyAlias = data?.alias;
 				this._currentPropertyKey = data?.unique;
@@ -55,6 +68,16 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 				this.#loadAvailableFields();
 				this.#loadConfiguration();
 			}, 'observeData');
+
+			// Listen for workspace submit by observing when the workspace completes a save
+			// We detect this by observing changes to the data that indicate a successful save/reload
+			this.observe(instance?.isNew, (isNew) => {
+				// When transitioning from new to existing, a save occurred
+				if (isNew === false && this._isDirty) {
+					console.log('[ConditionalFields] Workspace saved, persisting configuration');
+					this.#saveConfiguration();
+				}
+			}, 'observeIsNew');
 		});
 
 		// Consume the document type workspace context to access all properties
@@ -127,6 +150,9 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			if (data) {
 				this._isConditional = data.isConditional ?? false;
 				this._conditionalRules = data.rules ?? [];
+				// Reset dirty flag when loading fresh data
+				this._isDirty = false;
+				this.#lastSavedPropertyId = this._currentPropertyKey;
 			} else if (error) {
 				console.error('Error loading conditional configuration:', error);
 			}
@@ -163,6 +189,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		this._isSaving = true;
 
 		try {
+			console.log('[ConditionalFields] Saving configuration...');
 			const { error } = await ConditionalFieldsService.saveConfiguration({
 				path: {
 					propertyTypeKey: this._currentPropertyKey
@@ -175,6 +202,10 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 
 			if (error) {
 				console.error('Failed to save configuration:', error);
+			} else {
+				console.log('[ConditionalFields] Configuration saved successfully');
+				this._isDirty = false;
+				this.#lastSavedPropertyId = this._currentPropertyKey;
 			}
 		} catch (error) {
 			console.error('Error saving conditional configuration:', error);
@@ -195,7 +226,8 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			this._conditionalRules = [];
 		}
 
-		this.#saveConfiguration();
+		// Mark as dirty but don't save yet - will save when workspace submits
+		this._isDirty = true;
 	}
 
 	#addConditionalRule() {
@@ -207,7 +239,8 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			logicalOperator: this._conditionalRules.length > 0 ? 'And' : 'And',
 		};
 		this._conditionalRules = [...this._conditionalRules, newRule];
-		this.#saveConfiguration();
+		// Mark as dirty but don't save yet - will save when workspace submits
+		this._isDirty = true;
 	}
 
 	#removeConditionalRule(id: string) {
@@ -218,7 +251,8 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			if (this._conditionalRules.length > 0) {
 				this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: 'And' };
 			}
-			this.#saveConfiguration();
+			// Mark as dirty but don't save yet - will save when workspace submits
+			this._isDirty = true;
 		}
 	}
 
@@ -226,7 +260,8 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		this._conditionalRules = this._conditionalRules.map((rule) =>
 			rule.id === id ? { ...rule, ...updates } : rule
 		);
-		this.#saveConfiguration();
+		// Mark as dirty but don't save yet - will save when workspace submits
+		this._isDirty = true;
 	}
 
 	#onFieldChange(id: string, event: UUISelectEvent) {
