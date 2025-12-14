@@ -11,7 +11,7 @@ const e = [
     type: "workspaceView",
     alias: "CndFlds.WorkspaceView.PropertyType.Settings",
     name: "Property Type Settings Workspace View",
-    element: () => import("./property-workspace-view-settings.element-2ZqmQXh3.js"),
+    element: () => import("./property-workspace-view-settings.element-Beo1KKBT.js"),
     weight: 950,
     meta: {
       label: "Conditional",
@@ -30,7 +30,7 @@ const e = [
     type: "workspaceContext",
     name: "Document Conditional Workspace Context",
     alias: "CndFlds.WorkspaceContext.Document.Conditional",
-    api: () => import("./document-conditional-workspace.context-CdriMGl0.js").then((o) => o.d),
+    api: () => import("./document-conditional-workspace.context-DQX9WotS.js").then((o) => o.d),
     conditions: [
       {
         alias: t,

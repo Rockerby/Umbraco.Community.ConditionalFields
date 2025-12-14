@@ -106,7 +106,6 @@ export class UmbDocumentConditionalWorkspaceContext extends UmbContextBase {
 	 * Load all conditional configurations for the current document type
 	 */
 	async #loadConfigurations() {
-		debugger;
 		if (!this.#documentTypeKey) {
 			console.warn('[ConditionalFields] No document type key available');
 			return;
@@ -154,7 +153,6 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 		}
 
 		try {
-			debugger;
 			// Get all properties from the document type structure
 			const allProperties = await this.#documentContext.structure?.getContentTypeProperties();
 
@@ -224,8 +222,9 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 	 */
 	async #performInitialEvaluation() {
 		console.log("[ConditionalFields] Performing initial evaluation of conditional properties");
-		// Wait a tick to ensure all properties are rendered
-		await new Promise(resolve => setTimeout(resolve, 200));
+
+		// Wait for the UI to be fully rendered using MutationObserver
+		await this.#waitForUIRender();
 
 		for (const [propertyKey, config] of this.#configurations) {
 			console.log("Initial eval for", {propertyKey, config});
@@ -233,6 +232,69 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 				this.#evaluateAndApplyVisibility(propertyKey);
 			}
 		}
+	}
+
+	/**
+	 * Wait for the UI to be rendered by watching for property elements in the DOM
+	 * Uses MutationObserver to detect when content is added
+	 */
+	async #waitForUIRender(): Promise<void> {
+		return new Promise((resolve) => {
+			console.log("[ConditionalFields] Waiting for UI to render...");
+
+			// First, try to find any umb-property element
+			const checkForProperties = () => {
+				const findInShadowDOM = (root: Document | ShadowRoot | Element): Element | null => {
+					const property = root.querySelector('umb-property');
+					if (property) return property;
+
+					const elements = root.querySelectorAll('*');
+					for (const el of elements) {
+						if (el.shadowRoot) {
+							const found = findInShadowDOM(el.shadowRoot);
+							if (found) return found;
+						}
+					}
+					return null;
+				};
+				const docRoot = document.querySelector('umb-app')!;
+				if (docRoot) return null;
+				return findInShadowDOM(docRoot);
+			};
+
+			// Check if properties already exist
+			if (checkForProperties()) {
+				console.log("[ConditionalFields] Properties already rendered");
+				// Give it a small additional delay for all properties to settle
+				setTimeout(() => resolve(), 100);
+				return;
+			}
+
+			// Set up MutationObserver to watch for when properties are added
+			let timeoutId: number;
+			const observer = new MutationObserver(() => {
+				if (checkForProperties()) {
+					console.log("[ConditionalFields] Properties detected via MutationObserver");
+					observer.disconnect();
+					clearTimeout(timeoutId);
+					// Give it a small additional delay for all properties to settle
+					setTimeout(() => resolve(), 100);
+				}
+			});
+
+			// Observe the entire document for changes
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true,
+			});
+
+			// Fallback timeout after 5 seconds
+			timeoutId = window.setTimeout(() => {
+				console.warn("[ConditionalFields] UI render timeout - proceeding anyway");
+				observer.disconnect();
+				resolve();
+			}, 200);
+		});
 	}
 
 	/**
@@ -287,9 +349,10 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 
 	/**
 	 * Apply visibility to a property element in the DOM
+	 * Includes retry logic if element not found immediately
 	 */
-	#applyVisibilityToDOM(propertyAlias: string, visible: boolean) {
-		console.log(`[ConditionalFields] Applying visibility to ${propertyAlias}: ${visible}`);
+	#applyVisibilityToDOM(propertyAlias: string, visible: boolean, retryCount = 0) {
+		console.log(`[ConditionalFields] Applying visibility to ${propertyAlias}: ${visible} (attempt ${retryCount + 1})`);
 
 		// Helper function to search through shadow DOM recursively
 		const findPropertyElement = (root: Document | ShadowRoot | Element): Element | null => {
@@ -327,7 +390,16 @@ console.log("Built config, not doingbuilde reserve", this.#configurations);
 		const propertyElement = findPropertyElement(document);
 
 		if (!propertyElement) {
-			console.warn(`[ConditionalFields] Could not find property element for: ${propertyAlias}`);
+			// If not found and we haven't retried too many times, try again after a delay
+			if (retryCount < 5) {
+				const delay = 200 * (retryCount + 1); // Exponential backoff: 200ms, 400ms, 600ms, etc.
+				console.warn(`[ConditionalFields] Property element not found for: ${propertyAlias}, retrying in ${delay}ms...`);
+				setTimeout(() => {
+					this.#applyVisibilityToDOM(propertyAlias, visible, retryCount + 1);
+				}, delay);
+			} else {
+				console.error(`[ConditionalFields] Could not find property element for: ${propertyAlias} after ${retryCount} retries`);
+			}
 			return;
 		}
 

@@ -101,7 +101,8 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 				.filter(prop => prop.alias !== this._currentPropertyAlias)
 				.map(prop => ({
 					value: prop.alias ?? '',
-					name: `${prop.name} (${prop.alias})`
+					name: `${prop.name} (${prop.alias})`,
+					selected: false
 				}))
 				.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
 		} catch (error) {
@@ -210,12 +211,15 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	}
 
 	#removeConditionalRule(id: string) {
-		this._conditionalRules = this._conditionalRules.filter((rule) => rule.id !== id);
-		// Ensure first rule always has 'And' as logical operator (API requirement)
-		if (this._conditionalRules.length > 0) {
-			this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: 'And' };
+		// TODO: Better confirmation dialog
+		if(confirm("Are you sure you want to remove this rule?")){
+			this._conditionalRules = this._conditionalRules.filter((rule) => rule.id !== id);
+			// Ensure first rule always has 'And' as logical operator (API requirement)
+			if (this._conditionalRules.length > 0) {
+				this._conditionalRules[0] = { ...this._conditionalRules[0], logicalOperator: 'And' };
+			}
+			this.#saveConfiguration();
 		}
-		this.#saveConfiguration();
 	}
 
 	#updateConditionalRule(id: string, updates: Partial<ConditionalRule>) {
@@ -352,7 +356,10 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 							.value=${rule.logicalOperator || 'And'}
 							@change=${(e: UUISelectEvent) => this.#onLogicalOperatorChange(rule.id, e)}
 							label="Logical Operator"
-							.options=${groupingOperators}
+							.options=${groupingOperators.map(op => ({
+								...op,
+								selected: op.value === rule.logicalOperator
+							}))}
 							>
 						</uui-select>
 					</div>
@@ -367,7 +374,10 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 							@change=${(e: UUISelectEvent) => this.#onFieldChange(rule.id, e)}
 							placeholder="Select a field"
 							label="Field"
-							.options=${this._availableFields}>
+							.options=${this._availableFields.map(field => ({
+								...field,
+								selected: field.value === rule.fieldAlias
+							}))}>
 						</uui-select>
 					</div>
 
@@ -376,7 +386,10 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 						<uui-select
 							@change=${(e: UUISelectEvent) => this.#onOperatorChange(rule.id, e)}
 							label="Operator"
-							.options=${operators}>
+							.options=${operators.map(op => ({
+								...op,
+								selected: op.value === rule.operator
+							}))}>
 						</uui-select>
 					</div>
 
