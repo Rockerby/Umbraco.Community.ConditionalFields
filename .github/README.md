@@ -16,7 +16,7 @@ Including screenshots is a really good idea!
 If you put images into /docs/screenshots, then you would reference them in this readme as, for example:
  
 -->
-<img alt="Property Editor fields" src="https://github.com/Rockerby/Umbraco.Community.ConditionalProperties/blob/develop/docs/screenshots/1-setup.png">
+<img alt="Property Editor fields" src="https://github.com/Rockerby/Umbraco.Community.ConditionalProperties/blob/dev/docs/screenshots/1-setup.png">
   
 
 ## Installation
