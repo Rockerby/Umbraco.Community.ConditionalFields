@@ -1,14 +1,14 @@
 {
-    "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json", 
-    "AuthorDetails": {
-      "Name": "Richard Ockerby",
-      "ImageUrl": "https://github.com/Rockerby.png"
-    },
-    "Category": "",
-    "Description": "",
-    "LicenseTypes": [ "Free" ],
-    "IssueTrackerUrl": "https://github.com/Rockerby/Umbraco.Community.ConditionalFields/issues",
-    "PackageType": "Package",
-    "Tags": [],
-    "Title": "Conditional Fields "
-  }
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "AuthorDetails": {
+    "Name": "Richard Ockerby",
+    "ImageUrl": "https://github.com/Rockerby.png"
+  },
+  "Category": "developer-tools",
+  "Description": "",
+  "LicenseTypes": [ "Free" ],
+  "IssueTrackerUrl": "https://github.com/Rockerby/Umbraco.Community.ConditionalProperties/issues",
+  "PackageType": "Package",
+  "Tags": [ "backoffice editor" ],
+  "Title": "Conditional Fields "
+}

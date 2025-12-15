@@ -5,23 +5,23 @@
 :: set up git
 git init
 git branch -M main
-git remote add origin https://github.com/Rockerby/Umbraco.Community.ConditionalFields.git
+git remote add origin https://github.com/Rockerby/Umbraco.Community.ConditionalProperties.git
 
 :: ensure latest Umbraco templates used
 dotnet new install Umbraco.Templates --force
 
 :: use the umbraco-extension dotnet template to add the package project
 cd src
-dotnet new umbraco-extension -n "ConditionalFields" --site-domain "https://localhost:44367" --include-example
+dotnet new umbraco-extension -n "ConditionalProperties" --site-domain "https://localhost:44367" --include-example
 
 :: replace package .csproj with the one from the template so has nuget info
-cd ConditionalFields
-del ConditionalFields.csproj
-ren ConditionalFields_nuget.csproj ConditionalFields.csproj
+cd ConditionalProperties
+del ConditionalProperties.csproj
+ren ConditionalProperties_nuget.csproj ConditionalProperties.csproj
 
 :: add project to solution
 cd..
-dotnet sln add "ConditionalFields"
+dotnet sln add "ConditionalProperties"
 
 :: add reference to project from test site
-dotnet add "ConditionalFields.TestSite/ConditionalFields.TestSite.csproj" reference "ConditionalFields/ConditionalFields.csproj"
+dotnet add "ConditionalProperties.TestSite/ConditionalProperties.TestSite.csproj" reference "ConditionalProperties/ConditionalProperties.csproj"
