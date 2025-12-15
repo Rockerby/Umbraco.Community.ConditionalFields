@@ -1,4 +1,4 @@
-# Conditional Fields 
+# Conditional Properties 
 
 [![Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.ConditionalProperties?color=cc9900)](https://www.nuget.org/packages/Umbraco.Community.ConditionalProperties/)
 [![NuGet](https://img.shields.io/nuget/vpre/Umbraco.Community.ConditionalProperties?color=0273B3)](https://www.nuget.org/packages/Umbraco.Community.ConditionalProperties)
@@ -31,5 +31,5 @@ Contributions to this package are most welcome! Please read the [Contributing Gu
 
 ## Acknowledgments
 
-Icon: Conditional logic by gravisio from [Noun Project](https://thenounproject.com/browse/icons/term/conditional-logic/) (CC BY 3.0)
+Icon: Conditional logic by gravisio from [Noun Project](https://thenounproject.com/browse/icons/term/conditional-logic/) (CC BY 3.0)  
 [Lotte Pitcher's Opinionated Starter Kit](https://github.com/LottePitcher/opinionated-package-starter) got me up and running
