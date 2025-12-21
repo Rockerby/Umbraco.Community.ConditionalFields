@@ -31,7 +31,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 	private _conditionalRules: ConditionalRule[] = [];
 
 	@state()
-	private _availableFields: Array<{ value: string; name: string }> = [];
+	private _availableFields: Array<{ value: string; name: string; editorUiAlias?: string; dataType?: any; config?: any }> = [];
 
 	@state()
 	private _currentPropertyAlias?: string;
@@ -54,7 +54,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			this.observe(instance?.data, (data) => {
 				this._data = data;
 				this._currentPropertyAlias = data?.alias;
-				this._currentPropertyKey = data?.id;
+				this._currentPropertyKey = (data as any)?.id || (data as any)?.key;
 
 				// Load the configuration when property data changes
 				this.#loadAvailableFields();
@@ -89,16 +89,19 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 			const allProperties = await this.#documentTypeContext.structure.getContentTypeProperties();
 
 			// Filter out the current property being edited (optional - prevents self-reference)
-			// and map to the format needed for the dropdown
+			// and map to the format needed for the dropdown, including property editor info
 			this._availableFields = allProperties
 				.filter(prop => prop.alias !== this._currentPropertyAlias)
 				.map(prop => ({
 					value: prop.alias ?? '',
-					name: `${prop.name} (${prop.alias})`
+					name: `${prop.name} (${prop.alias})`,
+					editorUiAlias: (prop as any).propertyEditorUiAlias || (prop as any).editorUiAlias,
+					dataType: (prop as any).dataType,
+					config: (prop as any).config
 				}))
 				.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
 
-			console.log('Loaded available fields:', this._availableFields);
+			console.log('Loaded available fields with editor info:', this._availableFields);
 		} catch (error) {
 			console.error('Error loading available fields:', error);
 			this._availableFields = [];
@@ -224,6 +227,90 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 		return !['isEmpty', 'isNotEmpty'].includes(operator);
 	}
 
+	#getFieldInfo(fieldAlias: string) {
+		return this._availableFields.find(f => f.value === fieldAlias);
+	}
+
+	#onBooleanValueChange(id: string, event: UUIBooleanInputEvent) {
+		this.#updateConditionalRule(id, { value: event.target.checked ? 'true' : 'false' });
+	}
+
+	#onSelectValueChange(id: string, event: UUISelectEvent) {
+		this.#updateConditionalRule(id, { value: event.target.value.toString() });
+	}
+
+	#renderValueInput(rule: ConditionalRule) {
+		const fieldInfo = this.#getFieldInfo(rule.fieldAlias);
+		const editorUiAlias = fieldInfo?.editorUiAlias;
+
+		// Toggle/Boolean input
+		if (editorUiAlias === 'Umb.PropertyEditorUi.Toggle') {
+			return html`
+				<div class="rule-field">
+					<label>Value</label>
+					<uui-toggle
+						.checked=${rule.value === 'true' || rule.value === '1'}
+						@change=${(e: UUIBooleanInputEvent) => this.#onBooleanValueChange(rule.id, e)}
+						label="Value">
+						<span slot="label">${rule.value === 'true' || rule.value === '1' ? 'True' : 'False'}</span>
+					</uui-toggle>
+				</div>
+			`;
+		}
+
+		// Dropdown input
+		if (editorUiAlias === 'Umb.PropertyEditorUi.Dropdown') {
+			const config = fieldInfo?.config || {};
+			const items = config.items || [];
+			const options = items.map((item: any) => ({
+				value: item.value || item.id || item,
+				name: item.name || item.label || item.value || item
+			}));
+
+			return html`
+				<div class="rule-field">
+					<label>Value</label>
+					<uui-select
+						.value=${rule.value}
+						@change=${(e: UUISelectEvent) => this.#onSelectValueChange(rule.id, e)}
+						placeholder="Select a value"
+						label="Value"
+						.options=${options}>
+					</uui-select>
+				</div>
+			`;
+		}
+
+		// Number input
+		if (editorUiAlias === 'Umb.PropertyEditorUi.Integer' || editorUiAlias === 'Umb.PropertyEditorUi.Decimal') {
+			return html`
+				<div class="rule-field">
+					<label>Value</label>
+					<uui-input
+						type="number"
+						.value=${rule.value}
+						@input=${(e: UUIInputEvent) => this.#onValueChange(rule.id, e)}
+						placeholder="Enter number"
+						label="Value">
+					</uui-input>
+				</div>
+			`;
+		}
+
+		// Default text input for all other types
+		return html`
+			<div class="rule-field">
+				<label>Value</label>
+				<uui-input
+					.value=${rule.value}
+					@input=${(e: UUIInputEvent) => this.#onValueChange(rule.id, e)}
+					placeholder="Enter value"
+					label="Value">
+				</uui-input>
+			</div>
+		`;
+	}
+
 	override render() {
 		if (!this._data) return;
 		return html`
@@ -312,6 +399,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 					<div class="rule-field">
 						<label>Field</label>
 						<uui-select
+							.value=${rule.fieldAlias}
 							@change=${(e: UUISelectEvent) => this.#onFieldChange(rule.id, e)}
 							placeholder="Select a field"
 							label="Field"
@@ -322,6 +410,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 					<div class="rule-field">
 						<label>Condition</label>
 						<uui-select
+							.value=${rule.operator}
 							@change=${(e: UUISelectEvent) => this.#onOperatorChange(rule.id, e)}
 							label="Operator"
 							.options=${operators}>
@@ -329,17 +418,7 @@ export class CndFldsPropertyTypeWorkspaceViewSettingsElement extends UmbLitEleme
 					</div>
 
 					${this.#operatorRequiresValue(rule.operator)
-						? html`
-							<div class="rule-field">
-								<label>Value</label>
-								<uui-input
-									.value=${rule.value}
-									@input=${(e: UUIInputEvent) => this.#onValueChange(rule.id, e)}
-									placeholder="Enter value"
-									label="Value">
-								</uui-input>
-							</div>
-						`
+						? this.#renderValueInput(rule)
 						: ''}
 				</div>
 
