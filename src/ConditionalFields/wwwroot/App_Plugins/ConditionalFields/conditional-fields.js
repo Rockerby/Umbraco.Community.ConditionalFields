@@ -13,7 +13,7 @@ const i = [
     type: "workspaceView",
     alias: "CndFlds.WorkspaceView.PropertyType.Settings",
     name: "Property Type Settings Workspace View",
-    element: () => import("./property-workspace-view-settings.element-soHqiRjI.js"),
+    element: () => import("./property-workspace-view-settings.element-Df-TRAXS.js"),
     weight: 950,
     meta: {
       label: "Conditional",
