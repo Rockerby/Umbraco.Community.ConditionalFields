@@ -9,8 +9,8 @@
   <PropertyGroup>
     <Product>Umbraco.Community.ConditionalProperties</Product>
     <PackageId>Umbraco.Community.ConditionalProperties</PackageId>
-    <Title>Conditional Fields </Title>
-    <Description>...</Description>
+    <Title>Conditional Properties</Title>
+    <Description>An extension to make conditional properties in the Umbraco Back Office a first class citizen</Description>
     <PackageTags>umbraco;umbraco-marketplace</PackageTags>
     <Authors>Richard Ockerby</Authors>
     <Copyright>$([System.DateTime]::UtcNow.ToString(`yyyy`)) © Richard Ockerby</Copyright>
@@ -41,6 +41,10 @@
   
   <ItemGroup>
     <None Include="..\..\docs\README_nuget.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\docs\images\conditional-properties-icon.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
