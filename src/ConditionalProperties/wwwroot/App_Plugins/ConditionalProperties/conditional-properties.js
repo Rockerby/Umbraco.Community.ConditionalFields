@@ -1,17 +1,17 @@
-import { UMB_WORKSPACE_CONDITION_ALIAS as t } from "@umbraco-cms/backoffice/workspace";
-const e = [
+import { UMB_WORKSPACE_CONDITION_ALIAS as o } from "@umbraco-cms/backoffice/workspace";
+const t = [
   {
     name: "Conditional Fields Entrypoint",
     alias: "ConditionalProperties.Entrypoint",
     type: "backofficeEntryPoint",
     js: () => import("./entrypoint-d0LBbOjY.js")
   }
-], n = "Umb.Workspace.PropertyType", i = "Umb.Workspace.Document", a = [
+], n = "Umb.Workspace.PropertyType", e = "Umb.Workspace.Document", a = "Umb.Workspace.Block", i = "Umb.Workspace.Media", s = [
   {
     type: "workspaceView",
     alias: "CndFlds.WorkspaceView.PropertyType.Settings",
     name: "Property Type Settings Workspace View",
-    element: () => import("./property-workspace-view-settings.element-CMQkz44V.js"),
+    element: () => import("./property-workspace-view-settings.element-fH3132Oq.js"),
     weight: 950,
     meta: {
       label: "Conditional",
@@ -21,7 +21,7 @@ const e = [
     },
     conditions: [
       {
-        alias: t,
+        alias: o,
         match: n
       }
     ]
@@ -30,18 +30,42 @@ const e = [
     type: "workspaceContext",
     name: "Document Conditional Workspace Context",
     alias: "CndFlds.WorkspaceContext.Document.Conditional",
-    api: () => import("./document-conditional-workspace.context-BvrHaWXi.js").then((o) => o.d),
+    api: () => import("./document-conditional-workspace.context-DS49IdA9.js"),
     conditions: [
       {
-        alias: t,
+        alias: o,
+        match: e
+      }
+    ]
+  },
+  {
+    type: "workspaceContext",
+    name: "Block Conditional Workspace Context",
+    alias: "CndFlds.WorkspaceContext.Block.Conditional",
+    api: () => import("./generic-conditional-workspace.context--yn_uE6F.js"),
+    conditions: [
+      {
+        alias: o,
+        match: a
+      }
+    ]
+  },
+  {
+    type: "workspaceContext",
+    name: "Media Conditional Workspace Context",
+    alias: "CndFlds.WorkspaceContext.Media.Conditional",
+    api: () => import("./generic-conditional-workspace.context--yn_uE6F.js"),
+    conditions: [
+      {
+        alias: o,
         match: i
       }
     ]
   }
 ], p = [
-  ...e,
+  ...t,
   // ...dashboards,
-  ...a
+  ...s
 ];
 export {
   p as manifests

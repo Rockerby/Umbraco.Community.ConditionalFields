@@ -1,6 +1,8 @@
 import { UMB_WORKSPACE_CONDITION_ALIAS } from '@umbraco-cms/backoffice/workspace';
 export const UMB_PROPERTY_TYPE_WORKSPACE_ALIAS = 'Umb.Workspace.PropertyType';
 export const UMB_DOCUMENT_WORKSPACE_ALIAS = 'Umb.Workspace.Document';
+export const UMB_BLOCK_WORKSPACE_ALIAS = 'Umb.Workspace.Block';
+export const UMB_MEDIA_WORKSPACE_ALIAS = 'Umb.Workspace.Media';
 
 export const manifests: Array<UmbExtensionManifest> = [
   {
@@ -30,6 +32,30 @@ export const manifests: Array<UmbExtensionManifest> = [
       {
         alias: UMB_WORKSPACE_CONDITION_ALIAS,
         match: UMB_DOCUMENT_WORKSPACE_ALIAS,
+      },
+    ],
+  },
+  {
+    type: 'workspaceContext',
+    name: 'Block Conditional Workspace Context',
+    alias: 'CndFlds.WorkspaceContext.Block.Conditional',
+    api: () => import('./generic-conditional-workspace.context.js'),
+    conditions: [
+      {
+        alias: UMB_WORKSPACE_CONDITION_ALIAS,
+        match: UMB_BLOCK_WORKSPACE_ALIAS,
+      },
+    ],
+  },
+  {
+    type: 'workspaceContext',
+    name: 'Media Conditional Workspace Context',
+    alias: 'CndFlds.WorkspaceContext.Media.Conditional',
+    api: () => import('./generic-conditional-workspace.context.js'),
+    conditions: [
+      {
+        alias: UMB_WORKSPACE_CONDITION_ALIAS,
+        match: UMB_MEDIA_WORKSPACE_ALIAS,
       },
     ],
   },

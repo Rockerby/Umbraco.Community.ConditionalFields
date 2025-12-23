@@ -3,7 +3,8 @@ import { UMB_DOCUMENT_TYPE_WORKSPACE_CONTEXT as U } from "@umbraco-cms/backoffic
 import { html as s, css as q, state as c, customElement as V } from "@umbraco-cms/backoffice/external/lit";
 import { UmbLitElement as L } from "@umbraco-cms/backoffice/lit-element";
 import { UmbTextStyles as B } from "@umbraco-cms/backoffice/style";
-import { U as G, C as z } from "./document-conditional-workspace.context-BvrHaWXi.js";
+import { UMB_DOCUMENT_CONDITIONAL_WORKSPACE_CONTEXT as G } from "./document-conditional-workspace.context-DS49IdA9.js";
+import { C as z } from "./sdk.gen-DVSN0z9Q.js";
 var X = Object.defineProperty, Y = Object.getOwnPropertyDescriptor, E = (e) => {
   throw TypeError(e);
 }, l = (e, i, t, u) => {
@@ -547,9 +548,9 @@ l([
 r = l([
   V("cndflds-property-type-workspace-view-settings")
 ], r);
-const ie = r;
+const te = r;
 export {
   r as CndFldsPropertyTypeWorkspaceViewSettingsElement,
-  ie as default
+  te as default
 };
-//# sourceMappingURL=property-workspace-view-settings.element-CMQkz44V.js.map
+//# sourceMappingURL=property-workspace-view-settings.element-fH3132Oq.js.map
