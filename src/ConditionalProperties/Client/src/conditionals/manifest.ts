@@ -2,6 +2,9 @@ import { UMB_WORKSPACE_CONDITION_ALIAS } from '@umbraco-cms/backoffice/workspace
 export const UMB_PROPERTY_TYPE_WORKSPACE_ALIAS = 'Umb.Workspace.PropertyType';
 export const UMB_DOCUMENT_WORKSPACE_ALIAS = 'Umb.Workspace.Document';
 
+// Block workspace alias (all block types use the same workspace)
+export const UMB_BLOCK_WORKSPACE_ALIAS = 'Umb.Workspace.Block';
+
 export const manifests: Array<UmbExtensionManifest> = [
   {
     type: 'workspaceView',
@@ -30,6 +33,19 @@ export const manifests: Array<UmbExtensionManifest> = [
       {
         alias: UMB_WORKSPACE_CONDITION_ALIAS,
         match: UMB_DOCUMENT_WORKSPACE_ALIAS,
+      },
+    ],
+  },
+  // Block conditional context (handles all block types: List, Grid, RTE)
+  {
+    type: 'workspaceContext',
+    name: 'Block Conditional Workspace Context',
+    alias: 'CndFlds.WorkspaceContext.Block.Conditional',
+    api: () => import('./block-conditional-workspace.context.js'),
+    conditions: [
+      {
+        alias: UMB_WORKSPACE_CONDITION_ALIAS,
+        match: UMB_BLOCK_WORKSPACE_ALIAS,
       },
     ],
   },

@@ -38,7 +38,20 @@ export class UmbDocumentConditionalWorkspaceContext extends UmbContextBase {
 
 		this.#init();
 	}
+	async #initContext() {
+		const contentTypeId = this.#documentContext?.getContentTypeUnique();
 
+		if (contentTypeId) {
+			console.log("[ConditionalProperties] Init - contentTypeId", contentTypeId);
+			this.#documentTypeKey = contentTypeId;
+			await this.#setupPropertyMappings();
+			await this.#loadConfigurations();
+
+			// Setup observers using the document workspace context directly
+			await this.#setupPropertyObservers();
+			await this.#performInitialEvaluation();
+		}
+	}
 	async #init() {
 		console.log("[ConditionalProperties] Initializing workspace context");
 
@@ -49,18 +62,7 @@ export class UmbDocumentConditionalWorkspaceContext extends UmbContextBase {
 
 			// Get the content type ID and initialize
 			const initializeContext = async () => {
-				const contentTypeId = context?.getContentTypeUnique();
-
-				if (contentTypeId) {
-					console.log("[ConditionalProperties] Init - contentTypeId", contentTypeId);
-					this.#documentTypeKey = contentTypeId;
-					await this.#setupPropertyMappings();
-					await this.#loadConfigurations();
-
-					// Setup observers using the document workspace context directly
-					await this.#setupPropertyObservers();
-					await this.#performInitialEvaluation();
-				}
+				await this.#initContext();
 			};
 
 			// Initialize immediately

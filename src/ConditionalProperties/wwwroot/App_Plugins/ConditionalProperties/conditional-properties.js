@@ -1,17 +1,17 @@
-import { UMB_WORKSPACE_CONDITION_ALIAS as t } from "@umbraco-cms/backoffice/workspace";
-const e = [
+import { UMB_WORKSPACE_CONDITION_ALIAS as o } from "@umbraco-cms/backoffice/workspace";
+const t = [
   {
     name: "Conditional Fields Entrypoint",
     alias: "ConditionalProperties.Entrypoint",
     type: "backofficeEntryPoint",
     js: () => import("./entrypoint-d0LBbOjY.js")
   }
-], n = "Umb.Workspace.PropertyType", i = "Umb.Workspace.Document", a = [
+], n = "Umb.Workspace.PropertyType", e = "Umb.Workspace.Document", i = "Umb.Workspace.Block", a = [
   {
     type: "workspaceView",
     alias: "CndFlds.WorkspaceView.PropertyType.Settings",
     name: "Property Type Settings Workspace View",
-    element: () => import("./property-workspace-view-settings.element-CMQkz44V.js"),
+    element: () => import("./property-workspace-view-settings.element-C9zzV-H9.js"),
     weight: 950,
     meta: {
       label: "Conditional",
@@ -21,7 +21,7 @@ const e = [
     },
     conditions: [
       {
-        alias: t,
+        alias: o,
         match: n
       }
     ]
@@ -30,20 +30,33 @@ const e = [
     type: "workspaceContext",
     name: "Document Conditional Workspace Context",
     alias: "CndFlds.WorkspaceContext.Document.Conditional",
-    api: () => import("./document-conditional-workspace.context-BvrHaWXi.js").then((o) => o.d),
+    api: () => import("./document-conditional-workspace.context-C70n2m49.js"),
     conditions: [
       {
-        alias: t,
+        alias: o,
+        match: e
+      }
+    ]
+  },
+  // Block conditional context (handles all block types: List, Grid, RTE)
+  {
+    type: "workspaceContext",
+    name: "Block Conditional Workspace Context",
+    alias: "CndFlds.WorkspaceContext.Block.Conditional",
+    api: () => import("./block-conditional-workspace.context-DkPrMM5u.js"),
+    conditions: [
+      {
+        alias: o,
         match: i
       }
     ]
   }
-], p = [
-  ...e,
+], c = [
+  ...t,
   // ...dashboards,
   ...a
 ];
 export {
-  p as manifests
+  c as manifests
 };
 //# sourceMappingURL=conditional-properties.js.map
