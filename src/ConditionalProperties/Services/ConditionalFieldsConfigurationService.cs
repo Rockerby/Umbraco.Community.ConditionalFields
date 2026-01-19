@@ -1,6 +1,8 @@
 using System.Text.Json;
 using ConditionalProperties.Models;
+using ConditionalProperties.Notifications;
 using Microsoft.Extensions.Logging;
+using Umbraco.Cms.Core.Events;
 using Umbraco.Cms.Core.Services;
 
 namespace ConditionalProperties.Services;
@@ -13,13 +15,16 @@ public class ConditionalPropertiesConfigurationService : IConditionalPropertiesC
     private const string KeyPrefix = "ConditionalProperties.PropertyType.";
 
     private readonly IKeyValueService _keyValueService;
+    private readonly IEventAggregator _eventAggregator;
     private readonly ILogger<ConditionalPropertiesConfigurationService> _logger;
 
     public ConditionalPropertiesConfigurationService(
         IKeyValueService keyValueService,
+        IEventAggregator eventAggregator,
         ILogger<ConditionalPropertiesConfigurationService> logger)
     {
         _keyValueService = keyValueService;
+        _eventAggregator = eventAggregator;
         _logger = logger;
     }
 
@@ -55,6 +60,8 @@ public class ConditionalPropertiesConfigurationService : IConditionalPropertiesC
             var json = JsonSerializer.Serialize(configuration);
 
             _keyValueService.SetValue(key, json);
+
+            await _eventAggregator.PublishAsync(new CdSavedNotification(propertyTypeKey, configuration));
 
             _logger.LogInformation("Saved conditional configuration for property type {PropertyTypeKey}", propertyTypeKey);
             await Task.CompletedTask;
@@ -102,7 +109,8 @@ public class ConditionalPropertiesConfigurationService : IConditionalPropertiesC
             {
                 foreach (var kvp in allKeyValues)
                 {
-                    if (string.IsNullOrEmpty(kvp.Value)) continue;
+                    if (string.IsNullOrEmpty(kvp.Value))
+                        continue;
 
                     // Extract the property type key from the key
                     var keyPart = kvp.Key.Replace(KeyPrefix, string.Empty);
