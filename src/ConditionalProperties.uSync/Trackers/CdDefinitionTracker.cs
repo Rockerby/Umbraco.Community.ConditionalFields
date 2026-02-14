@@ -12,10 +12,9 @@ namespace ConditionalProperties.uSync.Trackers
 
         public override List<TrackingItem> TrackingItems =>
         [
-            TrackingItem.Single(nameof(CdConfigurationDefinition.PropertyTypeKey), $"Info/{nameof(CdConfigurationDefinition.PropertyTypeKey)}"),
-            TrackingItem.Single(nameof(CdConfigurationDefinition.Configuration.IsConditional),  $"Info/{nameof(CdConfigurationDefinition.Configuration.IsConditional)}"),
-            TrackingItem.Single(nameof(CdConfigurationDefinition.Configuration.Rules),  $"Info/{nameof(CdConfigurationDefinition.Configuration.Rules)}"),
-            TrackingItem.Many("Source", "Sources/Source","Value")
+            TrackingItem.Single(nameof(CdConfigurationDefinition.Configuration.IsConditional),  $"Details/{nameof(CdConfigurationDefinition.Configuration.IsConditional)}"),
+            TrackingItem.Single(nameof(CdConfigurationDefinition.Configuration.Rules),  $"Details/{nameof(CdConfigurationDefinition.Configuration.Rules)}"),
+            TrackingItem.Many("Rules", "Rules/Rule","Value")
         ];
     }
 }

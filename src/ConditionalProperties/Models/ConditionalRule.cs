@@ -18,7 +18,7 @@ public class ConditionalRule
     /// <summary>
     /// The operator to use for comparison
     /// </summary>
-    public ConditionalOperator Operator { get; set; }
+    public ConditionalOperator Operator { get; set; } = ConditionalOperator.Equals;
 
     /// <summary>
     /// The value to compare against

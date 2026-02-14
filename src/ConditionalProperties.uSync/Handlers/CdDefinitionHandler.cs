@@ -12,11 +12,10 @@ using uSync.BackOffice.SyncHandlers;
 using uSync.BackOffice.SyncHandlers.Interfaces;
 using uSync.BackOffice.SyncHandlers.Models;
 using uSync.Core;
-using uSync.Core.Serialization;
 
 namespace ConditionalProperties.uSync.Handlers
 {
-    [SyncHandler("CdConfigurationDefinitionHandler", "Cd Configuraton Handler", "ConditionalDisplayers", 100)]
+    [SyncHandler("CdConfigurationDefinitionHandler", "Conditional Displayers", "ConditionalDisplayers", 100)]
     public class CdConfigurationDefinitionHandler : SyncHandlerRoot<CdConfigurationDefinition, CdConfigurationDefinition>,
         ISyncHandler,
         INotificationAsyncHandler<CdSavedNotification>
@@ -41,6 +40,13 @@ namespace ConditionalProperties.uSync.Handlers
             {
                 var handlerFolders = GetDefaultHandlerFolders();
                 var definition = new CdConfigurationDefinition(notification.PropertyTypeKey, notification.Configuration);
+
+                if (!definition.Configuration.IsConditional)
+                {
+                    await DeleteViaServiceAsync(definition);
+                }
+
+
                 var attempts = await ExportAsync(definition, handlerFolders, DefaultConfig);
                 foreach (var attempt in attempts)
                 {
@@ -67,7 +73,7 @@ namespace ConditionalProperties.uSync.Handlers
 
         protected override async Task<CdConfigurationDefinition?> GetFromServiceAsync(CdConfigurationDefinition? item)
         {
-            if(item is null)
+            if (item is null)
             {
                 return null;
             }
