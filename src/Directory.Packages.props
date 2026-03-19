@@ -8,8 +8,12 @@
     <PackageVersion Include="Microsoft.OpenApi" Version="2.3.10" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     <PackageVersion Include="Umbraco.Cms" Version="17.0.1" />
+    <PackageVersion Include="Umbraco.Cms.Web.Website" Version="17.0.1" />
+    <PackageVersion Include="Umbraco.Cms.Web.Common" Version="17.0.1" />
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="17.0.1" />
+    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="17.0.1"/>
     <PackageVersion Include="Umbraco.Cms.DevelopmentMode.Backoffice" Version="17.0.1" />
-    <PackageVersion Include="uSync" Version="17.0.0" />
+    <PackageVersion Include="uSync" Version="17.0.1" />
     <PackageVersion Include="uSync.BackOffice" Version="17.0.1" />
   </ItemGroup>
 </Project>

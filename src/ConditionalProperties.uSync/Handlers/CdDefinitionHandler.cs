@@ -15,7 +15,7 @@ using uSync.Core;
 
 namespace ConditionalProperties.uSync.Handlers
 {
-    [SyncHandler("CdConfigurationDefinitionHandler", "Conditional Displayers", "ConditionalDisplayers", 100)]
+    [SyncHandler("CdConfigurationDefinitionHandler", "Conditional Displayers", "ConditionalDisplayers", 100, Icon = "icon-eye")]
     public class CdConfigurationDefinitionHandler : SyncHandlerRoot<CdConfigurationDefinition, CdConfigurationDefinition>,
         ISyncHandler,
         INotificationAsyncHandler<CdSavedNotification>

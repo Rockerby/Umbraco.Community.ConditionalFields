@@ -33,4 +33,13 @@ export const manifests: Array<UmbExtensionManifest> = [
       },
     ],
   },
+  {
+		type: 'localization',
+		alias: 'CndFlds.lang.enus',
+		name: 'English',
+		meta: {
+			culture: 'en',
+		},
+		js: () => import('./lang/en-us.ts'),
+	},
 ];
