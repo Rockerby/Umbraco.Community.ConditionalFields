@@ -23,12 +23,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.OpenApi" Version="2.3.10" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
-    <PackageReference Include="Umbraco.Cms.Web.Website" Version="*" />
-    <PackageReference Include="Umbraco.Cms.Web.Common" Version="*" />
-    <PackageReference Include="Umbraco.Cms.Api.Common" Version="*" />
-    <PackageReference Include="Umbraco.Cms.Api.Management" Version="*" />
+    <PackageReference Include="Microsoft.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Umbraco.Cms.Web.Website" />
+    <PackageReference Include="Umbraco.Cms.Web.Common" />
+    <PackageReference Include="Umbraco.Cms.Api.Common" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" />
   </ItemGroup>
   
   <ItemGroup>
