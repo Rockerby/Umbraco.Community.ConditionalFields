@@ -117,6 +117,97 @@ export class UmbBlockConditionalWorkspaceContext extends UmbContextBase {
 				'observeDocumentData'
 			);
 		}
+
+		// Setup tab switch observer for blocks to re-evaluate when switching between tabs
+		this.#setupTabSwitchObserver();
+	}
+
+	/**
+	 * Setup observer to detect tab switches and re-evaluate conditional properties in blocks
+	 * This ensures properties are shown/hidden correctly when switching between tabs
+	 */
+	#setupTabSwitchObserver() {
+		let debounceTimeout: number | null = null;
+		let lastUrl = window.location.href;
+
+		const triggerReeval = () => {
+			// Debounce re-evaluation to avoid excessive calls
+			if (debounceTimeout !== null) {
+				clearTimeout(debounceTimeout);
+			}
+			debounceTimeout = window.setTimeout(() => {
+				console.log('[ConditionalProperties] Block tab switched, re-evaluating conditionals');
+				this.#onAnyPropertyChanged();
+				debounceTimeout = null;
+			}, 100); // Wait 100ms after last mutation before re-evaluating
+		};
+
+		// Listen for URL changes (Umbraco uses URL-based routing for tabs)
+		const checkUrlChange = () => {
+			const currentUrl = window.location.href;
+			if (currentUrl !== lastUrl) {
+				lastUrl = currentUrl;
+				console.log('[ConditionalProperties] Block URL changed, likely tab switch');
+				triggerReeval();
+			}
+		};
+
+		// Poll for URL changes (since Umbraco might use pushState without triggering popstate)
+		setInterval(checkUrlChange, 250);
+
+		// Also listen for popstate events (back/forward navigation)
+		window.addEventListener('popstate', () => {
+			console.log('[ConditionalProperties] Block popstate event detected');
+			checkUrlChange();
+		});
+
+		// Use MutationObserver to detect when tab panels become visible
+		const observer = new MutationObserver(() => {
+			triggerReeval();
+		});
+
+		// Find the workspace element and observe attribute changes
+		const findAndObserveWorkspace = () => {
+			const umbApp = document.querySelector('umb-app');
+			if (!umbApp?.shadowRoot) return;
+
+			// Look for tab panels or workspace views that change when tabs switch
+			const findTabContainer = (root: Document | ShadowRoot | Element): Element | null => {
+				// Look for common tab/router containers in block workspaces
+				const tabContainers = root.querySelectorAll('umb-block-workspace-view-edit-tab, umb-workspace-view, umb-router-slot, uui-tab-group');
+				if (tabContainers.length > 0) {
+					return tabContainers[0];
+				}
+
+				// Recursively search shadow roots
+				const allElements = root.querySelectorAll('*');
+				for (const el of allElements) {
+					if (el.shadowRoot) {
+						const found = findTabContainer(el.shadowRoot);
+						if (found) return found;
+					}
+				}
+				return null;
+			};
+
+			const tabContainer = findTabContainer(umbApp.shadowRoot);
+			if (tabContainer) {
+				// Observe the tab container for changes
+				observer.observe(tabContainer, {
+					childList: true,
+					subtree: true,
+					attributes: true,
+					attributeFilter: ['hidden', 'aria-hidden', 'style']
+				});
+				console.log('[ConditionalProperties] Block tab switch observer setup');
+			}
+		};
+
+		// Try to find and observe immediately
+		findAndObserveWorkspace();
+
+		// Also try again after a delay in case the workspace isn't ready yet
+		setTimeout(findAndObserveWorkspace, 1000);
 	}
 
 	/**
