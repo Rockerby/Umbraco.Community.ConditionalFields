@@ -1,0 +1,14 @@
+{
+  "id": "ConditionalProperties",
+  "name": "ConditionalProperties",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Conditional Properties Bundle",
+      "alias": "ConditionalProperties.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/ConditionalProperties/conditional-properties.js"
+    }
+  ]
+}
