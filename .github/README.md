@@ -21,7 +21,7 @@ If you put images into /docs/screenshots, then you would reference them in this 
 
 ## Installation
 
-Add the package to an existing Umbraco website (v17+) from nuget:
+Add the package to an existing Umbraco website (v17+) from nuget (currently in pre-release):
 
 `dotnet add package Umbraco.Community.ConditionalProperties`
 
